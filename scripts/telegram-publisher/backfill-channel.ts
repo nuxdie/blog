@@ -56,7 +56,7 @@ const config = {
   publicChannelUsername: normalizeTelegramUsername(process.env.PUBLIC_CHANNEL_USERNAME ?? ""),
   publicChannelDisableNotification: parseBooleanEnv(process.env.PUBLIC_CHANNEL_DISABLE_NOTIFICATION, true),
   publicSiteUrl: normalizeSiteBaseUrl(process.env.PUBLIC_SITE_URL ?? ""),
-  githubRepo: (process.env.GITHUB_REPO ?? "").trim(),
+  githubRepo: normalizeGitHubRepo(process.env.GITHUB_REPO ?? ""),
   botDataDir: process.env.BOT_DATA_DIR?.trim() || path.join(repoDir, "publisher-data")
 };
 
@@ -436,6 +436,22 @@ function normalizeSiteBaseUrl(input: string): string {
   } catch {
     return "";
   }
+}
+
+function normalizeGitHubRepo(input: string): string {
+  const trimmed = input.trim();
+  const withoutGitSuffix = trimmed.replace(/\.git$/i, "");
+  const httpsMatch = withoutGitSuffix.match(/^https?:\/\/github\.com\/([^/]+\/[^/]+)$/i);
+  if (httpsMatch) {
+    return httpsMatch[1];
+  }
+
+  const sshMatch = withoutGitSuffix.match(/^git@github\.com:([^/]+\/[^/]+)$/i);
+  if (sshMatch) {
+    return sshMatch[1];
+  }
+
+  return withoutGitSuffix;
 }
 
 function parseBooleanEnv(input: string | undefined, defaultValue: boolean): boolean {

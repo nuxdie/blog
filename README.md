@@ -175,7 +175,7 @@ Required environment variables:
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_OWNER_ID`
 - `GITHUB_TOKEN`
-- `GITHUB_REPO` (example: `WiegerWolf/blog`)
+- `GITHUB_REPO` (example: `nuxdie/blog`)
 
 Optional variables:
 
@@ -230,6 +230,12 @@ Useful flags:
 ```bash
 cp .env.publisher.example .env.publisher
 docker compose -f docker-compose.publisher.yml up -d --build
+```
+
+If the GitHub account/repo is renamed, update `GITHUB_REPO` in `.env.publisher` and the mounted repo remote:
+
+```bash
+git -C publisher-repo-live remote set-url origin https://github.com/nuxdie/blog.git
 ```
 
 The compose file mounts:

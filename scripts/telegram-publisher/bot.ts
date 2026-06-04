@@ -265,7 +265,7 @@ const config = {
   telegramToken: requiredEnv("TELEGRAM_BOT_TOKEN"),
   ownerId: Number(requiredEnv("TELEGRAM_OWNER_ID")),
   githubToken: requiredEnv("GITHUB_TOKEN"),
-  githubRepo: requiredEnv("GITHUB_REPO"),
+  githubRepo: normalizeGitHubRepo(requiredEnv("GITHUB_REPO")),
   repoDir: process.env.PUBLISH_REPO_DIR ?? "/repo",
   dataDir: process.env.BOT_DATA_DIR ?? "/data",
   baseBranch: process.env.POST_BASE_BRANCH ?? "main",
@@ -361,9 +361,11 @@ async function runStartupChecks() {
   await assertCleanWorkingTree();
   console.log("Git check passed: working tree is clean");
 
-  const repo = await githubRequest<GitHubRepoInfo>(`/repos/${config.githubRepo}`, "GET");
+  const configuredRepo = config.githubRepo;
+  const repo = await githubRequest<GitHubRepoInfo>(`/repos/${configuredRepo}`, "GET");
   if (repo.full_name.toLowerCase() !== config.githubRepo.toLowerCase()) {
-    throw new Error(`GITHUB_REPO mismatch. Expected ${config.githubRepo}, got ${repo.full_name}`);
+    config.githubRepo = repo.full_name;
+    console.warn(`GitHub repo canonicalized: ${configuredRepo} -> ${config.githubRepo}`);
   }
 
   if (repo.permissions) {
@@ -2837,6 +2839,22 @@ function normalizeSiteBaseUrl(input: string): string {
   } catch {
     return "";
   }
+}
+
+function normalizeGitHubRepo(input: string): string {
+  const trimmed = input.trim();
+  const withoutGitSuffix = trimmed.replace(/\.git$/i, "");
+  const httpsMatch = withoutGitSuffix.match(/^https?:\/\/github\.com\/([^/]+\/[^/]+)$/i);
+  if (httpsMatch) {
+    return httpsMatch[1];
+  }
+
+  const sshMatch = withoutGitSuffix.match(/^git@github\.com:([^/]+\/[^/]+)$/i);
+  if (sshMatch) {
+    return sshMatch[1];
+  }
+
+  return withoutGitSuffix;
 }
 
 async function resolvePublishedPostUrl(lang: Lang, slug: string): Promise<string | null> {
